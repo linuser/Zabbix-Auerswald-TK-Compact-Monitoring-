@@ -1,0 +1,1662 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+  - uuid: 57ba5ced733e4c22b5a8cf4ff49f1788
+    name: Templates/Telephony
+  templates:
+  - uuid: 746c0321d41346a3acb9d099c7dacf28
+    template: Auerswald COMpact 5000 by HTTP
+    name: Auerswald COMpact 5000 by HTTP
+    description: 'Monitoring fuer Auerswald COMpact 4000/5000/5200/5500R und COMmander 6000 via HTTP API (Digest Auth).
+
+
+      Autor: Alexander Fox | PlaNet Fox
+
+      Version: 3.0
+
+      Datum: 2026-02-25'
+    macros:
+    - macro: '{$AUERSWALD.IP}'
+      value: 192.168.1.240
+      description: IP-Adresse der Auerswald Anlage
+    - macro: '{$AUERSWALD.PORT}'
+      value: '443'
+      description: 'HTTPS-Port (Standard: 443)'
+    - macro: '{$AUERSWALD.USER}'
+      value: ''
+      description: Sub-Admin Nummer (interne Rufnummer)
+    - macro: '{$AUERSWALD.PASSWORD}'
+      value: ''
+      type: SECRET_TEXT
+      description: Web-/API-Passwort
+    - macro: '{$AUERSWALD.VMF_STORAGE.WARN}'
+      value: '80'
+    - macro: '{$AUERSWALD.VMF_STORAGE.CRIT}'
+      value: '95'
+    - macro: '{$AUERSWALD.PING.WARN}'
+      value: '0.1'
+    - macro: '{$AUERSWALD.SIP.PROXY}'
+      value: ''
+      description: SIP-Proxy Hostname (z.B. s<Seriennr>.pbx.auerproxy.de) - pro Anlage setzen!
+    - macro: '{$AUERSWALD.SIP.PORT}'
+      value: '5060'
+      description: SIP Port (5060=SIP, 5061=SIPS)
+    - macro: '{$AUERSWALD.SYSLOG.PATH}'
+      value: /var/log/auerswald.log
+      description: Pfad zur Auerswald Syslog-Datei auf dem Zabbix Proxy/Server
+    items:
+    - uuid: abdec678c19d42c0aee8c964c8bb5db7
+      name: 'System: Raw Info'
+      type: HTTP_AGENT
+      key: auerswald.system.raw
+      delay: 5m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_about
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      tags:
+      - tag: component
+        value: system
+    - uuid: ddf12be113744b7485bb39c6f4448229
+      name: 'System: PBX Type'
+      type: DEPENDENT
+      key: auerswald.system.pbx
+      delay: '0'
+      history: 7d
+      value_type: CHAR
+      master_item:
+        key: auerswald.system.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.pbx
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: system
+    - uuid: 09f2ad6694ea4a748a6b4517d9db6e25
+      name: 'System: Firmware'
+      type: DEPENDENT
+      key: auerswald.system.firmware
+      delay: '0'
+      history: 90d
+      value_type: CHAR
+      master_item:
+        key: auerswald.system.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.version
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: system
+    - uuid: 9b6ca13fdbdc488193708b5d591f5c48
+      name: 'System: Serial'
+      type: DEPENDENT
+      key: auerswald.system.serial
+      delay: '0'
+      history: 90d
+      value_type: CHAR
+      master_item:
+        key: auerswald.system.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.serial
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: system
+    - uuid: 180a9d07e67d449a99bbcc74a8382c2d
+      name: 'System: MAC'
+      type: DEPENDENT
+      key: auerswald.system.mac
+      delay: '0'
+      history: 90d
+      value_type: CHAR
+      master_item:
+        key: auerswald.system.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.macaddr
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: system
+    - uuid: 313a25d54830476e985c2834f4952acc
+      name: 'System: Date'
+      type: DEPENDENT
+      key: auerswald.system.date
+      delay: '0'
+      history: 7d
+      value_type: CHAR
+      master_item:
+        key: auerswald.system.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.date
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: system
+    - uuid: fa3f10823c224b25bb0f35062ebb4319
+      name: 'System: PBX Type ID'
+      type: DEPENDENT
+      key: auerswald.system.pbxtype
+      delay: '0'
+      history: 7d
+      master_item:
+        key: auerswald.system.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.pbxType
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      valuemap:
+        name: PBX Type
+      tags:
+      - tag: component
+        value: system
+    - uuid: 4633a424a8764783904ba3ff1aa51970
+      name: 'ICMP: Ping'
+      type: SIMPLE
+      key: icmpping[,,,,]
+      delay: 60s
+      history: 7d
+      valuemap:
+        name: Service state
+      tags:
+      - tag: component
+        value: network
+    - uuid: 637fe25be4b3428bba41bc1812eeb054
+      name: 'ICMP: Response Time'
+      type: SIMPLE
+      key: icmppingsec[,,,,]
+      delay: 60s
+      history: 30d
+      value_type: FLOAT
+      units: s
+      tags:
+      - tag: component
+        value: network
+    - uuid: 0f0935bbe3564c48add070f4080d4e6d
+      name: 'ICMP: Packet Loss'
+      type: SIMPLE
+      key: icmppingloss[,,,,]
+      delay: 60s
+      history: 30d
+      value_type: FLOAT
+      units: '%'
+      tags:
+      - tag: component
+        value: network
+    - uuid: d0739daa75d74b2eadb2bcdafbf18e98
+      name: 'HTTPS: Status Code'
+      type: HTTP_AGENT
+      key: auerswald.https.status
+      delay: 60s
+      history: 7d
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_about
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      retrieve_mode: HEADERS
+      preprocessing:
+      - type: REGEX
+        parameters:
+        - HTTP/\S+ (\d+)
+        - \1
+      tags:
+      - tag: component
+        value: network
+    - uuid: ce4eff0f255341eeb7ee9f3bc0856939
+      name: 'Exchanges: Raw'
+      type: HTTP_AGENT
+      key: auerswald.exchanges.raw
+      delay: 2m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_amt_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      tags:
+      - tag: component
+        value: exchanges
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 624b170665864b00b27d05d96bf75030
+      name: 'Exchanges: Count'
+      type: DEPENDENT
+      key: auerswald.exchanges.count
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.exchanges.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: exchanges
+    - uuid: 42818a1c43a04037aa756fa88be31d44
+      name: 'Exchanges: VoIP Count'
+      type: DEPENDENT
+      key: auerswald.exchanges.voip
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.exchanges.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.art == 2 || @.art == 4)].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: exchanges
+    - uuid: 32fd73ad533442649a00890fbf624745
+      name: 'Exchanges: Names'
+      type: DEPENDENT
+      key: auerswald.exchanges.names
+      delay: '0'
+      history: 7d
+      value_type: TEXT
+      master_item:
+        key: auerswald.exchanges.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[*].name
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: exchanges
+    - uuid: 96cc06d861ed43fea929a6dfd6858b85
+      name: 'Conversations: Raw'
+      type: HTTP_AGENT
+      key: auerswald.conversations.raw
+      delay: 30s
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_conversation_data
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      tags:
+      - tag: component
+        value: calls
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 6ad7f7bdf7674d1d9813ee2aaf856d23
+      name: 'Conversations: Active Count'
+      type: DEPENDENT
+      key: auerswald.conversations.active
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.conversations.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: calls
+    - uuid: 99b800d36ed543a89ba7168e426362f1
+      name: 'Calls: List Raw'
+      type: HTTP_AGENT
+      key: auerswald.calls.raw
+      delay: 5m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_call_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      tags:
+      - tag: component
+        value: calls
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 87bd6b80668b462da586c14ffdb85553
+      name: 'Subscriber: Properties Raw'
+      type: HTTP_AGENT
+      key: auerswald.subscriber.raw
+      delay: 2m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_tln_props
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: 'Teilnehmer-Eigenschaften: Rufumleitung (cfwd_all/busy/noreply),
+
+        Ruhe vor dem Telefon (DND), Anklopfen (callwaiting).
+
+        Als Sub-Admin: eigene Eigenschaften.
+
+        '
+      tags:
+      - tag: component
+        value: subscriber
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: a972a1a0a7ff4f08ad0f21f458974886
+      name: 'Groups: State Raw'
+      type: HTTP_AGENT
+      key: auerswald.groups.raw
+      delay: 5m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_grp_state
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: Rufgruppen-Status (An/Abgemeldet pro Teilnehmer)
+      tags:
+      - tag: component
+        value: groups
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 13f40d58671444a6ac0e4971838e8c88
+      name: 'MSN/DDI: Forwarding Raw'
+      type: HTTP_AGENT
+      key: auerswald.msn.forwarding.raw
+      delay: 5m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_msn_aws_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: MSN/DDI Rufumleitungen - zeigt ob versehentlich Umleitungen aktiv
+      tags:
+      - tag: component
+        value: msn
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: b6947c49403c4a7d95f36ce2645b3523
+      name: 'VoiceFax: Storage Raw'
+      type: HTTP_AGENT
+      key: auerswald.vmf.storage.raw
+      delay: 10m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_vmf_storage_overview
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      tags:
+      - tag: component
+        value: voicefax
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 564b9f8d284844e8aa243fc9001d62b6
+      name: 'VoiceFax: Used %'
+      type: DEPENDENT
+      key: auerswald.vmf.used.pct
+      delay: '0'
+      history: 90d
+      value_type: FLOAT
+      units: '%'
+      master_item:
+        key: auerswald.vmf.storage.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.usedPercent
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: voicefax
+    - uuid: ce3d11de64524194ae2b302c026de0e5
+      name: 'VoiceFax: Total MB'
+      type: DEPENDENT
+      key: auerswald.vmf.total
+      delay: '0'
+      history: 30d
+      value_type: FLOAT
+      units: MB
+      master_item:
+        key: auerswald.vmf.storage.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.totalMB
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: voicefax
+    - uuid: e62cfc4865b844c3812423c21a29d1e8
+      name: 'VoiceFax: Used MB'
+      type: DEPENDENT
+      key: auerswald.vmf.used
+      delay: '0'
+      history: 90d
+      value_type: FLOAT
+      units: MB
+      master_item:
+        key: auerswald.vmf.storage.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.usedMB
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: voicefax
+    - uuid: 90a2880748014550ab7ba47d384ef561
+      name: 'VoiceFax: Box List Raw'
+      type: HTTP_AGENT
+      key: auerswald.vmf.boxes.raw
+      delay: 15m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_vmf_box_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: VM/Fax-Boxen Liste mit An/Aus Status
+      tags:
+      - tag: component
+        value: voicefax
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: e68748c073144fb1bcc4adc81b35b4b3
+      name: 'VoiceFax: Messages Raw'
+      type: HTTP_AGENT
+      key: auerswald.vmf.messages.raw
+      delay: 10m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_vmf_msg_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      tags:
+      - tag: component
+        value: voicefax
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: ffbd6207d0254abd9cd8d37f49a1083b
+      name: 'VoiceFax: Message Count'
+      type: DEPENDENT
+      key: auerswald.vmf.msg.count
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.vmf.messages.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: voicefax
+    - uuid: 674d91d217fa48b18b490c12c51a5d59
+      name: 'VoiceFax: Unread Count'
+      type: DEPENDENT
+      key: auerswald.vmf.msg.unread
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.vmf.messages.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.isnewmsg == 1)].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: voicefax
+    - uuid: 7ae6e9a0d4384fdb95a322993f4dd4e0
+      name: 'Relays: List Raw'
+      type: HTTP_AGENT
+      key: auerswald.relays.raw
+      delay: 5m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_relais_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: Alle Relais (Tueroeffner, IP-Relais, Schaltaktoren)
+      tags:
+      - tag: component
+        value: relays
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 16ac6cfb76da42de834961051a91c836
+      name: 'Relays: Status Raw'
+      type: HTTP_AGENT
+      key: auerswald.relays.status.raw
+      delay: 2m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_relais_status
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      tags:
+      - tag: component
+        value: relays
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 9edaf7318cc04fa8a455ff3f0508783d
+      name: 'Alarms: List Raw'
+      type: HTTP_AGENT
+      key: auerswald.alarms.list.raw
+      delay: 5m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_alarm_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      tags:
+      - tag: component
+        value: alarms
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 7c7dc00edd3d4cbcaf44e30c73c24092
+      name: 'Alarms: Active Raw'
+      type: HTTP_AGENT
+      key: auerswald.alarms.active.raw
+      delay: 2m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_get_alarms
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: Aktuell ausgeloeste Alarme
+      tags:
+      - tag: component
+        value: alarms
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 119ae464f7ab4ec285a20392f9537153
+      name: 'Config: List Raw'
+      type: HTTP_AGENT
+      key: auerswald.config.raw
+      delay: 5m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_config_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: Systemkonfigurationen (Tag/Nacht/Wochenende) mit aktiver Markierung
+      tags:
+      - tag: component
+        value: config
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 7077615aa4b44dc3b28877b56c30f585
+      name: 'Phonebook: Categories Raw'
+      type: HTTP_AGENT
+      key: auerswald.phonebook.cat.raw
+      delay: 1h
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_telefonbuch_cat
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: Telefonbuch-Kategorien (API v3+)
+      tags:
+      - tag: component
+        value: phonebook
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 33e13b7477704c5d90de82824d030260
+      name: 'API: Auth Check Raw'
+      type: HTTP_AGENT
+      key: auerswald.api.auth.status
+      delay: 2m
+      history: '0'
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_amt_list
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return JSON.stringify(d); } return value; } catch(e) { return value; }
+      description: Abruft app_amt_list mit Auth. Wenn JSON kommt = Auth OK
+      tags:
+      - tag: component
+        value: api
+      value_type: TEXT
+      status_codes: 200,404,423
+    - uuid: e3992bcb6ec449e896f0857da02c3fc8
+      name: 'API: Account Lock Timer'
+      type: DEPENDENT
+      key: auerswald.api.locked
+      delay: '0'
+      history: 7d
+      master_item:
+        key: auerswald.api.auth.status
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.blocked
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      description: Sekunden bis Sperre aufgehoben. 0 = nicht gesperrt
+      tags:
+      - tag: component
+        value: api
+    - uuid: 1b1b4764e35d4c66b4993eeafacd0528
+      name: 'External Ports: Status Raw'
+      type: HTTP_AGENT
+      key: auerswald.ext.ports.raw
+      delay: 2m
+      history: '0'
+      value_type: TEXT
+      url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_ext_ports_status
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      authtype: DIGEST
+      username: '{$AUERSWALD.USER}'
+      password: '{$AUERSWALD.PASSWORD}'
+      description: 'Status aller externen Ports (VoIP-Trunks, ISDN). Pro Kanal: amtId, anschlArt, bKanalStatus, bKanalGesperrt'
+      tags:
+      - tag: component
+        value: voip
+      status_codes: 200,404,423
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        error_handler: DISCARD_VALUE
+    - uuid: 71e900b6fd6c4da38c373ad191b2fdbc
+      name: 'External Ports: Total Channels'
+      type: DEPENDENT
+      key: auerswald.ext.ports.count
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.ext.ports.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      tags:
+      - tag: component
+        value: voip
+    - uuid: e83e64bb83ce4359a261efadcb11e723
+      name: 'External Ports: Active Channels'
+      type: DEPENDENT
+      key: auerswald.ext.ports.active
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.ext.ports.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.bKanalStatus != "0")].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      description: Anzahl aktuell belegter externer Kanaele
+      tags:
+      - tag: component
+        value: voip
+    - uuid: 9d7c67f836dc43f8859e0d685f6e84ab
+      name: 'External Ports: Blocked Channels'
+      type: DEPENDENT
+      key: auerswald.ext.ports.blocked
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.ext.ports.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.bKanalGesperrt != "0")].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      description: Anzahl gesperrter externer Kanaele
+      tags:
+      - tag: component
+        value: voip
+    - uuid: 087e434a535e41adb3f6b2b607c1054f
+      name: 'API: Authenticated'
+      type: DEPENDENT
+      key: auerswald.api.available
+      delay: '0'
+      history: 7d
+      master_item:
+        key: auerswald.api.auth.status
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      - type: JAVASCRIPT
+        parameters:
+        - 'return (value > 0) ? 1 : 0;'
+      description: 1 = API Auth funktioniert, 0 = Auth-Fehler oder gesperrt
+      tags:
+      - tag: component
+        value: api
+    - uuid: 57a76cf3a7354a8fb582d9aa5b3bdef0
+      name: 'SIP Proxy: DNS Resolution'
+      type: SIMPLE
+      key: net.dns[,{$AUERSWALD.SIP.PROXY},,,2]
+      delay: 5m
+      history: 7d
+      description: DNS-Aufloesung des SIP-Proxy Hostnames. 1=OK, 0=Fehler
+      valuemap:
+        name: Service state
+      tags:
+      - tag: component
+        value: sip
+    - uuid: 433dd2e1708c452f9edc0dd88705806c
+      name: 'SIP Proxy: Resolved IP'
+      type: SIMPLE
+      key: net.dns.record[,{$AUERSWALD.SIP.PROXY},,,2]
+      delay: 5m
+      history: 7d
+      value_type: TEXT
+      description: Aufgeloeste IP-Adresse des SIP-Proxy
+      tags:
+      - tag: component
+        value: sip
+    - uuid: 560c62dfa5604c888c033c28d279480e
+      name: 'SIP Proxy: Ping'
+      type: SIMPLE
+      key: icmpping[{$AUERSWALD.SIP.PROXY},,,]
+      delay: 60s
+      history: 7d
+      description: Ping zum SIP-Proxy. 1=erreichbar, 0=nicht erreichbar
+      valuemap:
+        name: Service state
+      tags:
+      - tag: component
+        value: sip
+    - uuid: 0aea2eaa77ed4268a1ad06465c148aef
+      name: 'SIP Proxy: Latency'
+      type: SIMPLE
+      key: icmppingsec[{$AUERSWALD.SIP.PROXY},,,]
+      delay: 60s
+      history: 30d
+      value_type: FLOAT
+      units: s
+      description: Ping-Antwortzeit zum SIP-Proxy
+      tags:
+      - tag: component
+        value: sip
+    - uuid: 214469ceee384d1494955a531a59e2d1
+      name: 'SIP Proxy: Port {$AUERSWALD.SIP.PORT}'
+      type: SIMPLE
+      key: net.tcp.service[tcp,{$AUERSWALD.SIP.PROXY},{$AUERSWALD.SIP.PORT}]
+      delay: 2m
+      history: 7d
+      description: SIP Port offen. 1=OK, 0=geschlossen/nicht erreichbar
+      valuemap:
+        name: Service state
+      tags:
+      - tag: component
+        value: sip
+    - uuid: ff8cc7684af54654b945bdbd0dd3f979
+      name: 'SIP Proxy: Port 5061 (SIPS)'
+      type: SIMPLE
+      key: net.tcp.service[tcp,{$AUERSWALD.SIP.PROXY},5061]
+      delay: 2m
+      history: 7d
+      description: SIPS Port (TLS) offen. 1=OK, 0=geschlossen/nicht erreichbar
+      valuemap:
+        name: Service state
+      tags:
+      - tag: component
+        value: sip
+    - uuid: 03bbf17fd743415ba4255f2c1ed90cc7
+      name: 'Firmware: Latest Available'
+      type: HTTP_AGENT
+      key: auerswald.firmware.latest
+      delay: 1d
+      history: 30d
+      value_type: TEXT
+      url: https://www.auerswald.de/de/support/produkt/compact-4000/support
+      verify_peer: 'NO'
+      verify_host: 'NO'
+      preprocessing:
+      - type: REGEX
+        parameters:
+        - Firmware\s+Version\s+([0-9]+\.[0-9]+[A-Z]?)
+        - \1
+        error_handler: CUSTOM_VALUE
+        error_handler_params: unknown
+      description: Prueft taeglich die Auerswald-Website auf neueste Firmware-Version. URL muss ggf. pro Modell angepasst werden.
+      tags:
+      - tag: component
+        value: system
+      status_codes: 200,404,403,503
+    - uuid: 65b0a52d4bb74a078d1fb3175ecaabf9
+      name: 'External Ports: VoIP Channels'
+      type: DEPENDENT
+      key: auerswald.ext.ports.voip.count
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.ext.ports.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.anschlArt==2)].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      description: Anzahl VoIP-Kanaele (anschlArt=2)
+      tags:
+      - tag: component
+        value: voip
+    - uuid: a1c1deb8ff964e558c6368874dce65ed
+      name: 'External Ports: VoIP Active'
+      type: DEPENDENT
+      key: auerswald.ext.ports.voip.active
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.ext.ports.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.anschlArt==2 && @.bKanalStatus!=0)].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      description: Aktuell belegte VoIP-Kanaele
+      tags:
+      - tag: component
+        value: voip
+    - uuid: a51def46478c44b2a0531d5a3929208f
+      name: 'External Ports: VoIP Blocked'
+      type: DEPENDENT
+      key: auerswald.ext.ports.voip.blocked
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.ext.ports.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.anschlArt==2 && @.bKanalGesperrt!=0)].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      description: Gesperrte VoIP-Kanaele - kann auf SIP-Registrierungsfehler hindeuten!
+      tags:
+      - tag: component
+        value: voip
+    - uuid: 0d6362ebfc354e2784f3589eb1e8a823
+      name: 'External Ports: ISDN Channels'
+      type: DEPENDENT
+      key: auerswald.ext.ports.isdn.count
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.ext.ports.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.anschlArt==0 || @.anschlArt==1)].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      description: Anzahl ISDN-Kanaele (anschlArt 0=PTP, 1=PTMP)
+      tags:
+      - tag: component
+        value: voip
+    - uuid: 62e952f875704821971c1635320aa5d6
+      name: 'External Ports: ISDN Blocked'
+      type: DEPENDENT
+      key: auerswald.ext.ports.isdn.blocked
+      delay: '0'
+      history: 90d
+      master_item:
+        key: auerswald.ext.ports.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $[?(@.anschlArt<=1 && @.bKanalGesperrt!=0)].length()
+        error_handler: CUSTOM_VALUE
+        error_handler_params: '0'
+      description: Gesperrte ISDN-Kanaele
+      tags:
+      - tag: component
+        value: voip
+    - uuid: 7b7ceb536d8e432ab487d8295e30eb83
+      name: 'System: Date Correct'
+      type: DEPENDENT
+      key: auerswald.system.date.ok
+      delay: '0'
+      history: 7d
+      master_item:
+        key: auerswald.system.raw
+      preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.date
+      - type: JAVASCRIPT
+        parameters:
+        - 'var now = new Date(); var dd = String(now.getDate()).padStart(2,"0"); var mm = String(now.getMonth()+1).padStart(2,"0"); var yyyy = now.getFullYear(); var today = dd+"."+mm+"."+yyyy; return (value
+          === today) ? 1 : 0;'
+      description: 1 = Anlagen-Datum stimmt mit Server-Datum ueberein, 0 = Datum falsch!
+      tags:
+      - tag: component
+        value: system
+    - uuid: 66225262eabb44918fdca7e84335fb17
+      name: 'Syslog: SIP Auth Fehler'
+      type: ZABBIX_ACTIVE
+      key: log[{$AUERSWALD.SYSLOG.PATH},"(auth.*fail|401.*Unauthorized|registration.*failed|SIP.*403)",,,skip,\0]
+      delay: 30s
+      history: 7d
+      value_type: LOG
+      description: 'Ueberwacht Syslog auf fehlgeschlagene SIP-Authentifizierungen. Benoetigt: rsyslog auf Proxy mit Auerswald als Quelle.'
+      status: DISABLED
+      tags:
+      - tag: component
+        value: syslog
+    - uuid: 443d686b42534c0fb46c53b3b943c7a8
+      name: 'Syslog: Fehler'
+      type: ZABBIX_ACTIVE
+      key: log[{$AUERSWALD.SYSLOG.PATH},"(error|critical|emergency|alert)",,,skip,\0]
+      delay: 30s
+      history: 7d
+      value_type: LOG
+      description: Ueberwacht Syslog auf allgemeine Fehlermeldungen der Anlage.
+      status: DISABLED
+      tags:
+      - tag: component
+        value: syslog
+    - uuid: a8abe021011947aea30df696727c1fa9
+      name: 'Syslog: Neustart erkannt'
+      type: ZABBIX_ACTIVE
+      key: log[{$AUERSWALD.SYSLOG.PATH},"(reboot|restart|startup|boot)",,,skip,\0]
+      delay: 30s
+      history: 7d
+      value_type: LOG
+      description: Erkennt Neustarts der Anlage via Syslog.
+      status: DISABLED
+      tags:
+      - tag: component
+        value: syslog
+    - uuid: cbe76b3b8d184e1a9a7759b56e05311f
+      name: 'Syslog: Datei vorhanden'
+      type: ZABBIX_ACTIVE
+      key: vfs.file.exists[{$AUERSWALD.SYSLOG.PATH}]
+      delay: 5m
+      history: 7d
+      description: 1 = Syslog-Datei existiert, 0 = nicht vorhanden (Syslog nicht konfiguriert)
+      tags:
+      - tag: component
+        value: syslog
+      status: DISABLED
+    - uuid: 41a7b2e2322242feb89101a94bcaae02
+      name: 'Syslog: Letzte Meldung'
+      type: ZABBIX_ACTIVE
+      key: vfs.file.time[{$AUERSWALD.SYSLOG.PATH},modify]
+      delay: 5m
+      history: 7d
+      units: unixtime
+      description: Zeitpunkt der letzten Syslog-Meldung. Lange Stille kann auf Verbindungsproblem hindeuten.
+      status: DISABLED
+      tags:
+      - tag: component
+        value: syslog
+    - uuid: df5edc6dd2184a759bad709726a2a2b2
+      name: 'MSN/DDI: Anzahl gesamt'
+      type: DEPENDENT
+      key: auerswald.msn.count.total
+      delay: '0'
+      description: Gesamtanzahl MSN/DDI-Eintraege (inkl. Duplikate auf mehreren Aemtern)
+      master_item:
+        key: auerswald.msn.forwarding.raw
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); return d.length; } catch(e) { return 0; }
+      tags:
+      - tag: component
+        value: msn
+    - uuid: d92b7701debd4be8860d59f8bcc5fe3d
+      name: 'MSN/DDI: Anzahl unique Rufnummern'
+      type: DEPENDENT
+      key: auerswald.msn.count.unique
+      delay: '0'
+      description: Anzahl eindeutiger Rufnummern (ohne Duplikate ueber mehrere Aemter)
+      master_item:
+        key: auerswald.msn.forwarding.raw
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); var seen = {}; var c = 0; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; c++; } } return c; } catch(e) { return 0; }
+      tags:
+      - tag: component
+        value: msn
+    - uuid: e35ca5e2ecea4f29a99fbf4dbf53e2fd
+      name: 'MSN/DDI: Rufnummern-Liste'
+      type: DEPENDENT
+      key: auerswald.msn.list
+      delay: '0'
+      history: 30d
+      value_type: TEXT
+      description: Liste aller konfigurierten Rufnummern mit Bezeichnung (unique nach Rufnummer)
+      master_item:
+        key: auerswald.msn.forwarding.raw
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); var seen = {}; var result = []; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; result.push(d[i].rufNummer + " = " + d[i].name);
+          } } result.sort(); return result.join("\n"); } catch(e) { return ""; }
+      tags:
+      - tag: component
+        value: msn
+    - uuid: 045e178bef5545f8920971ff48d2be88
+      name: 'MSN/DDI: Aktive Umleitungen'
+      type: DEPENDENT
+      key: auerswald.msn.aws.active
+      delay: '0'
+      history: 30d
+      value_type: TEXT
+      description: Rufnummern mit aktiver Anrufweiterschaltung (Sofort, Nichtmelden oder Besetzt)
+      master_item:
+        key: auerswald.msn.forwarding.raw
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - 'try { var d = JSON.parse(value); var result = []; for(var i=0;i<d.length;i++){ var aws = []; if(d[i].awssoforttyp !== 0) aws.push("Sofort->" + d[i].awssofortziel); if(d[i].awsnrtyp !== 0) aws.push("NR->"
+          + d[i].awsnrziel); if(d[i].awsbstyp !== 0) aws.push("Besetzt->" + d[i].awsbsziel); if(aws.length > 0){ result.push(d[i].rufNummer + " (" + d[i].name + "): " + aws.join(", ")); } } return result.length
+          > 0 ? result.join("\n") : "Keine"; } catch(e) { return ""; }'
+      tags:
+      - tag: component
+        value: msn
+    - uuid: ff72c33164eb495fb4edd289993837f1
+      name: 'MSN/DDI: Anzahl aktive Umleitungen'
+      type: DEPENDENT
+      key: auerswald.msn.aws.count
+      delay: '0'
+      description: Anzahl MSN/DDI-Eintraege mit aktiver Anrufweiterschaltung
+      master_item:
+        key: auerswald.msn.forwarding.raw
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - try { var d = JSON.parse(value); var c = 0; for(var i=0;i<d.length;i++){ if(d[i].awssoforttyp !== 0 || d[i].awsnrtyp !== 0 || d[i].awsbstyp !== 0) c++; } return c; } catch(e) { return 0; }
+      tags:
+      - tag: component
+        value: msn
+    - uuid: fd42a8ab310743a1acbb782038af030c
+      name: 'System: Anlagenname'
+      type: DEPENDENT
+      key: auerswald.system.name
+      delay: '0'
+      history: 90d
+      value_type: CHAR
+      description: Name der Anlage aus Systeminfo (PBX Typ + Seriennummer)
+      master_item:
+        key: auerswald.system.raw
+      preprocessing:
+      - type: JAVASCRIPT
+        parameters:
+        - 'try { var d = JSON.parse(value); return (d.pbxName || d.pbx || "") + " (SN: " + (d.pbxSerial || "") + ")"; } catch(e) { return ""; }'
+      tags:
+      - tag: component
+        value: system
+    valuemaps:
+    - uuid: 851024a56b2c44d7837196cfaa89e4b0
+      name: Service state
+      mappings:
+      - value: '0'
+        newvalue: Down
+      - value: '1'
+        newvalue: Up
+    - uuid: 0c652fd171f74056972ddf54b6329468
+      name: Exchange type
+      mappings:
+      - value: '0'
+        newvalue: ISDN-PTP
+      - value: '1'
+        newvalue: ISDN-PTMP
+      - value: '2'
+        newvalue: VoIP-PTMP
+      - value: '3'
+        newvalue: POTS (Analog)
+      - value: '4'
+        newvalue: VoIP-PTP
+    - uuid: 7923d006e388436e866e470fcdf5fc45
+      name: PBX Type
+      mappings:
+      - value: '0'
+        newvalue: Undefined
+      - value: '10'
+        newvalue: COMmander 6000
+      - value: '11'
+        newvalue: COMmander 6000R/RX
+      - value: '12'
+        newvalue: COMpact 5000
+      - value: '13'
+        newvalue: COMpact 5000R
+      - value: '20'
+        newvalue: COMpact 4000
+      - value: '33'
+        newvalue: COMpact 5200
+      - value: '34'
+        newvalue: COMpact 5200R
+      - value: '35'
+        newvalue: COMpact 5500R
+    groups:
+    - name: Templates/Telephony
+    tags:
+    - tag: class
+      value: telephony
+    - tag: target
+      value: auerswald
+    - tag: type
+      value: pbx
+  triggers:
+  - uuid: bf732edcd1264d9bb48b1e9ec9fed183
+    expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+    name: 'Auerswald: Nicht erreichbar (Ping)'
+    priority: DISASTER
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: network
+  - uuid: 435d4cfb513b4dd2918510a4981a9e60
+    expression: nodata(/Auerswald COMpact 5000 by HTTP/auerswald.system.raw,600)=1
+    name: 'Auerswald: Keine API-Antwort seit 10 Min'
+    priority: HIGH
+    dependencies:
+    - name: 'Auerswald: Nicht erreichbar (Ping)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: api
+  - uuid: bcb8070254ec4dbab14d516de757e411
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.https.status)<>200
+    name: 'Auerswald: Webinterface HTTP {ITEM.VALUE}'
+    priority: HIGH
+    dependencies:
+    - name: 'Auerswald: Nicht erreichbar (Ping)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: network
+  - uuid: 7e5913e2e37040b1bbca1df914c90843
+    expression: last(/Auerswald COMpact 5000 by HTTP/icmppingsec[,,,,])>{$AUERSWALD.PING.WARN}
+    name: 'Auerswald: Hohe Latenz ({ITEM.VALUE}s)'
+    priority: WARNING
+    tags:
+    - tag: scope
+      value: performance
+    - tag: component
+      value: network
+  - uuid: cd20b682d2d34f68886a7f73c7f1b872
+    expression: last(/Auerswald COMpact 5000 by HTTP/icmppingloss[,,,,])>10
+    name: 'Auerswald: Paketverlust {ITEM.VALUE}%'
+    priority: WARNING
+    tags:
+    - tag: scope
+      value: performance
+    - tag: component
+      value: network
+  - uuid: 8221ef88928a4fec8741f1494d5a2179
+    expression: change(/Auerswald COMpact 5000 by HTTP/auerswald.system.firmware)<>0
+    name: 'Auerswald: Firmware geaendert -> {ITEM.VALUE}'
+    priority: INFO
+    manual_close: 'YES'
+    tags:
+    - tag: scope
+      value: notice
+    - tag: component
+      value: firmware
+  - uuid: 2c427075b95b4b22970b976d555684b2
+    expression: change(/Auerswald COMpact 5000 by HTTP/auerswald.exchanges.count)<>0
+    name: 'Auerswald: Amtsleitungen geaendert (jetzt {ITEM.VALUE})'
+    priority: WARNING
+    manual_close: 'YES'
+    tags:
+    - tag: scope
+      value: notice
+    - tag: component
+      value: exchanges
+  - uuid: d593592c42a44a2ba15675497a47e5e6
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.vmf.used.pct)>{$AUERSWALD.VMF_STORAGE.WARN}
+    name: 'Auerswald: VM-Speicher >{$AUERSWALD.VMF_STORAGE.WARN}% ({ITEM.VALUE}%)'
+    priority: WARNING
+    tags:
+    - tag: scope
+      value: capacity
+    - tag: component
+      value: voicemail
+  - uuid: 455b147399304e498b209b92ffde37fb
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.vmf.used.pct)>{$AUERSWALD.VMF_STORAGE.CRIT}
+    name: 'Auerswald: VM-Speicher KRITISCH ({ITEM.VALUE}%)'
+    priority: HIGH
+    dependencies:
+    - name: 'Auerswald: VM-Speicher >{$AUERSWALD.VMF_STORAGE.WARN}% ({ITEM.VALUE}%)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.vmf.used.pct)>{$AUERSWALD.VMF_STORAGE.WARN}
+    tags:
+    - tag: scope
+      value: capacity
+    - tag: component
+      value: voicemail
+  - uuid: 07a64de93e984a638cbddaddce309a3e
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.vmf.msg.unread)>20
+    name: 'Auerswald: {ITEM.VALUE} ungelesene VM/Fax'
+    priority: WARNING
+    manual_close: 'YES'
+    tags:
+    - tag: scope
+      value: notice
+    - tag: component
+      value: voicemail
+  - uuid: d3858b977da1468491253c32fab34f16
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.api.available)=0
+    name: 'Auerswald: API Auth nicht verfuegbar'
+    priority: HIGH
+    description: 401=Falsches Passwort/User, 423=Account gesperrt, 404=Endpoint nicht gefunden
+    dependencies:
+    - name: 'Auerswald: Nicht erreichbar (Ping)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: api
+  - uuid: b22cdc151fc44ab3b9fd8b8b195a74e1
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.api.locked)>0
+    name: 'Auerswald: API Account GESPERRT (noch {ITEM.VALUE}s)'
+    priority: DISASTER
+    description: Anlage hat API-Zugang gesperrt wegen zu vieler fehlgeschlagener Logins. Warten oder Anlage neustarten.
+    dependencies:
+    - name: 'Auerswald: Nicht erreichbar (Ping)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+    tags:
+    - tag: scope
+      value: security
+    - tag: component
+      value: api
+  - uuid: fe807d43f9da4fe6af1df096ae5fc3c4
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.blocked)>0
+    name: 'Auerswald: {ITEM.VALUE} externe Kanaele gesperrt'
+    priority: WARNING
+    manual_close: 'YES'
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: channels
+  - uuid: 492387b8da894c299dfb41e42d3f65e1
+    expression: last(/Auerswald COMpact 5000 by HTTP/net.dns[,{$AUERSWALD.SIP.PROXY},,,2])=0
+    name: 'Auerswald: SIP-Proxy DNS Aufloesung fehlgeschlagen'
+    priority: DISASTER
+    description: SIP-Proxy Hostname kann nicht aufgeloest werden - keine VoIP-Telefonie moeglich!
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: sip-proxy
+  - uuid: 14999d9e7dd74be4bbdab949f1e7a10d
+    expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,])=0
+    name: 'Auerswald: SIP-Proxy nicht erreichbar (Ping)'
+    priority: HIGH
+    dependencies:
+    - name: 'Auerswald: SIP-Proxy DNS Aufloesung fehlgeschlagen'
+      expression: last(/Auerswald COMpact 5000 by HTTP/net.dns[,{$AUERSWALD.SIP.PROXY},,,2])=0
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: sip-proxy
+  - uuid: 7b503935bd3d45f9875eee3dd882c288
+    expression: last(/Auerswald COMpact 5000 by HTTP/net.tcp.service[tcp,{$AUERSWALD.SIP.PROXY},{$AUERSWALD.SIP.PORT}])=0 and last(/Auerswald COMpact 5000 by HTTP/net.tcp.service[tcp,{$AUERSWALD.SIP.PROXY},5061])=0
+    name: 'Auerswald: SIP-Proxy Ports nicht erreichbar (5060+5061)'
+    priority: HIGH
+    dependencies:
+    - name: 'Auerswald: SIP-Proxy nicht erreichbar (Ping)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,])=0
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: sip-proxy
+  - uuid: b2fe28fa4fdc46ad9712dc2a1c5f9b34
+    expression: last(/Auerswald COMpact 5000 by HTTP/icmppingsec[{$AUERSWALD.SIP.PROXY},,,])>0.1
+    name: 'Auerswald: SIP-Proxy hohe Latenz ({ITEM.VALUE}s)'
+    priority: WARNING
+    description: Hohe Latenz zum SIP-Proxy kann Sprachqualitaet beeintraechtigen
+    tags:
+    - tag: scope
+      value: performance
+    - tag: component
+      value: sip-proxy
+  - uuid: ba746230527749258b5cdc5c1db30786
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
+    name: 'Auerswald: ALLE externen Kanaele belegt ({ITEM.VALUE}/{ITEM.VALUE1})'
+    priority: HIGH
+    description: Alle VoIP/ISDN-Kanaele sind belegt. Neue Anrufe werden abgewiesen!
+    tags:
+    - tag: scope
+      value: capacity
+    - tag: component
+      value: channels
+  - uuid: b48855e78aad4f8a80c1b63f6c297467
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active)>(last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)*0.8) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
+    name: 'Auerswald: Hohe Kanalbelegung (>80%)'
+    priority: WARNING
+    dependencies:
+    - name: 'Auerswald: ALLE externen Kanaele belegt ({ITEM.VALUE}/{ITEM.VALUE1})'
+      expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
+    description: Ueber 80% der externen Kanaele belegt
+    tags:
+    - tag: scope
+      value: capacity
+    - tag: component
+      value: channels
+  - uuid: dd9b85b55c4b4a98a2853173f7fe6d1f
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.firmware.latest)<>"unknown" and last(/Auerswald COMpact 5000 by HTTP/auerswald.firmware.latest)<>last(/Auerswald COMpact 5000 by HTTP/auerswald.system.firmware)
+      and length(last(/Auerswald COMpact 5000 by HTTP/auerswald.firmware.latest))>0
+    name: 'Auerswald: Firmware-Update verfuegbar ({ITEM.VALUE})'
+    priority: INFO
+    manual_close: 'YES'
+    description: Neue Firmware auf der Auerswald-Website verfuegbar. Aktuell installiert vs. online Version.
+    tags:
+    - tag: scope
+      value: notice
+    - tag: component
+      value: firmware
+  - uuid: a4e0d7cfafcf4010bd6ab3d577e214db
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.blocked)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
+    name: 'Auerswald: ALLE VoIP-Kanaele gesperrt - SIP-Registrierung fehlgeschlagen?'
+    priority: DISASTER
+    description: 'Alle VoIP-Kanaele sind gesperrt. Haeufigste Ursache: SIP-Registrierung beim Provider fehlgeschlagen. Pruefen: Monitoring > Status VoIP-Accounts in der Anlage.'
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: voip-channels
+  - uuid: 6f20245a03404f72bf6d209fc158517f
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.blocked)>0
+    name: 'Auerswald: {ITEM.VALUE} VoIP-Kanaele gesperrt'
+    priority: WARNING
+    dependencies:
+    - name: 'Auerswald: ALLE VoIP-Kanaele gesperrt - SIP-Registrierung fehlgeschlagen?'
+      expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.blocked)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: voip-channels
+  - uuid: 1d5fa18728ca4f4890910ebae9649f97
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.isdn.blocked)>0
+    name: 'Auerswald: {ITEM.VALUE} ISDN-Kanaele gesperrt'
+    priority: WARNING
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: channels
+  - uuid: b0b5e2bc9b9f4399b5e6f0931d013cda
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.active)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
+    name: 'Auerswald: Alle VoIP-Kanaele belegt'
+    priority: HIGH
+    description: Alle VoIP-Kanaele sind besetzt. Neue VoIP-Anrufe werden abgewiesen!
+    tags:
+    - tag: scope
+      value: capacity
+    - tag: component
+      value: voip-channels
+  - uuid: 755db8d31dec477da579027c9fe28f7b
+    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.system.date.ok)=0
+    name: 'Auerswald: Datum der Anlage stimmt nicht! ({ITEM.VALUE})'
+    priority: HIGH
+    description: 'Das Datum der Anlage weicht vom Server-Datum ab. Kann SIP-Registrierungsfehler verursachen! Pruefen: NTP-Einstellungen der Anlage.'
+    dependencies:
+    - name: 'Auerswald: Nicht erreichbar (Ping)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+    tags:
+    - tag: scope
+      value: security
+    - tag: component
+      value: system
+  - uuid: 5b2e099ed9594802915c17c56f979784
+    expression: logseverity(/Auerswald COMpact 5000 by HTTP/log[{$AUERSWALD.SYSLOG.PATH},"(auth.*fail|401.*Unauthorized|registration.*failed|SIP.*403)",,,skip,\0])>=0 and length(last(/Auerswald COMpact
+      5000 by HTTP/log[{$AUERSWALD.SYSLOG.PATH},"(auth.*fail|401.*Unauthorized|registration.*failed|SIP.*403)",,,skip,\0]))>0
+    name: 'Auerswald Syslog: SIP Auth Fehler erkannt'
+    priority: WARNING
+    manual_close: 'YES'
+    description: 'Fehlgeschlagener SIP-Login erkannt. Pruefen: falsches Passwort, deaktivierter Teilnehmer, Brute-Force-Versuch?'
+    status: DISABLED
+    tags:
+    - tag: scope
+      value: security
+    - tag: component
+      value: syslog
+  - uuid: ae2d68c3a78c45ebb4c95c06402c2e29
+    expression: logseverity(/Auerswald COMpact 5000 by HTTP/log[{$AUERSWALD.SYSLOG.PATH},"(error|critical|emergency|alert)",,,skip,\0])>=0 and length(last(/Auerswald COMpact 5000 by HTTP/log[{$AUERSWALD.SYSLOG.PATH},"(error|critical|emergency|alert)",,,skip,\0]))>0
+    name: 'Auerswald Syslog: Fehler erkannt'
+    priority: WARNING
+    manual_close: 'YES'
+    status: DISABLED
+    tags:
+    - tag: scope
+      value: notice
+    - tag: component
+      value: syslog
+  - uuid: bdeaeadb27eb475282d89d94632c5329
+    expression: logseverity(/Auerswald COMpact 5000 by HTTP/log[{$AUERSWALD.SYSLOG.PATH},"(reboot|restart|startup|boot)",,,skip,\0])>=0 and length(last(/Auerswald COMpact 5000 by HTTP/log[{$AUERSWALD.SYSLOG.PATH},"(reboot|restart|startup|boot)",,,skip,\0]))>0
+    name: 'Auerswald Syslog: Neustart erkannt'
+    priority: WARNING
+    manual_close: 'YES'
+    status: DISABLED
+    tags:
+    - tag: scope
+      value: availability
+    - tag: component
+      value: system
+  graphs:
+  - uuid: 0bd8ab011b474fc7a427edb0662ce6cc
+    name: 'Auerswald: Externe Kanaele'
+    width: '900'
+    height: '200'
+    graph_items:
+    - color: 00AA00
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: auerswald.ext.ports.count
+      drawtype: BOLD_LINE
+    - color: FF8800
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: auerswald.ext.ports.active
+      drawtype: FILLED_REGION
+    - color: FF0000
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: auerswald.ext.ports.blocked
+      drawtype: BOLD_LINE
+  - uuid: 08c52495f01d413199f12780508ae72a
+    name: 'Auerswald: VoIP-Kanaele'
+    width: '900'
+    height: '200'
+    graph_items:
+    - color: 2274A5
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: auerswald.ext.ports.voip.count
+      drawtype: BOLD_LINE
+    - color: FF8800
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: auerswald.ext.ports.voip.active
+      drawtype: FILLED_REGION
+    - color: FF0000
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: auerswald.ext.ports.voip.blocked
+      drawtype: BOLD_LINE
+  - uuid: e1c94ec2bd074dd4ac75a03d59774c4e
+    name: 'Auerswald: Netzwerk Anlage'
+    width: '900'
+    height: '200'
+    graph_items:
+    - color: 2274A5
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: icmppingsec[,,,,]
+      drawtype: FILLED_REGION
+    - color: FF0000
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: icmppingloss[,,,,]
+      drawtype: BOLD_LINE
+      yaxisside: RIGHT
+  - uuid: a79923dd98754f72a045a30fa8df223e
+    name: 'Auerswald: SIP-Proxy Latenz'
+    width: '900'
+    height: '200'
+    graph_items:
+    - color: 2274A5
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: icmppingsec[{$AUERSWALD.SIP.PROXY},,,]
+      drawtype: FILLED_REGION
+  - uuid: 7f30fb3ad467459e86611c75ae83ff98
+    name: 'Auerswald: Amtsleitungen'
+    width: '900'
+    height: '200'
+    graph_items:
+    - color: 2274A5
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: auerswald.exchanges.count
+      drawtype: BOLD_LINE
+    - color: 00AA00
+      item:
+        host: Auerswald COMpact 5000 by HTTP
+        key: auerswald.exchanges.voip
+      drawtype: FILLED_REGION
