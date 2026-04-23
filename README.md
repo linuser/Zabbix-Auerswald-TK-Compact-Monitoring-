@@ -140,6 +140,7 @@ input(type="imudp" port="514")
 | `{$AUERSWALD.SIP.PROXY}` | *(leer)* | SIP-Proxy FQDN |
 | `{$AUERSWALD.SIP.PORT}` | `5060` | SIP-Port |
 | `{$AUERSWALD.SYSLOG.PATH}` | `/var/log/auerswald.log` | Pfad zur Syslog-Datei |
+| `{$AUERSWALD.FIRMWARE.URL}` | `https://www.auerswald.de/de/support/produkt/compact-4000/support` | URL der Auerswald-Support-Seite für Firmware-Check. **Pro Modell anpassen!** z.B. `compact-5000`, `compact-5200`, `compact-5500r`, `commander-6000` |
 
 ### API-Endpunkte
 
@@ -338,6 +339,7 @@ input(type="imudp" port="514")
 | `{$AUERSWALD.SIP.PROXY}` | *(empty)* | SIP proxy FQDN |
 | `{$AUERSWALD.SIP.PORT}` | `5060` | SIP port |
 | `{$AUERSWALD.SYSLOG.PATH}` | `/var/log/auerswald.log` | Syslog file path |
+| `{$AUERSWALD.FIRMWARE.URL}` | `https://www.auerswald.de/de/support/produkt/compact-4000/support` | URL of the Auerswald support page for firmware check. **Adjust per model!** e.g. `compact-5000`, `compact-5200`, `compact-5500r`, `commander-6000` |
 
 ### API Endpoints
 
@@ -401,6 +403,22 @@ Host needs an Agent interface with the PBX IP. Agent does not need to be running
 ---
 
 ## Changelog
+
+### v3.1 (2026-04-23)
+
+**Bugfixes**
+- JSONPath Typ-Konsistenz: `/app_ext_ports_status` liefert laut API-Doku **Strings** (`anschlArt="2"`, `bKanalStatus="0"` etc.). Alle VoIP/ISDN-Filter nutzen jetzt durchgängig String-Vergleich — vorher waren die VoIP/ISDN-Subcounts durch Integer-Vergleich dauerhaft `0`, wodurch u.a. der DISASTER-Trigger „ALLE VoIP-Kanäle gesperrt" nie feuern konnte
+- VM-Speicher Trigger-Dependency gedreht: WARNING hängt jetzt von KRITISCH ab (vorher umgekehrt → KRITISCH wurde von WARNING unterdrückt)
+- HIGH-Trigger „API Auth nicht verfügbar" hängt jetzt zusätzlich vom DISASTER-Lock-Trigger ab — keine parallelen Alarme mehr bei 423
+- `change()`-Trigger (Amtsleitungen, Firmware) gegen API-Aussetzer abgesichert: Raw-Items werfen bei Blocked/Parse-Fehler eine Exception, `DISCARD_VALUE` greift, Dependents behalten letzten gültigen Wert
+- `system.date.ok`: robustere JS mit try/catch, matcht auch wenn API zusätzlich eine Uhrzeit mitliefert
+- MSN-Items: `Array.isArray`-Guard, `Number()`-Coercion bei Typenvergleichen
+- Firmware-Regex akzeptiert jetzt auch 3-stellige Versionen und Suffixes (`8.6.1`, `8.6C-SP1`)
+
+**Features**
+- Neues Macro `{$AUERSWALD.FIRMWARE.URL}` — Firmware-Check-URL pro Modell konfigurierbar (vorher hardcoded auf COMpact 4000)
+- Ping-Dependency bei Latenz-Triggern (Anlage + SIP-Proxy) gegen Recovery-Rauschen
+- `value_type: UNSIGNED` explizit bei Zähler-Items für Klarheit
 
 ### v3.0 (2026-02-25)
 - Zabbix 7.4 format (UUIDv4, master_item, authtype, template_groups)
