@@ -12,9 +12,30 @@ zabbix_export:
 
       Autor: Alexander Fox | PlaNet Fox
 
-      Version: 3.0
+      Version: 3.1
 
-      Datum: 2026-02-25'
+      Datum: 2026-04-23
+
+
+      Bugfixes v3.1:
+
+      - JSONPath Typ-Konsistenz: ext_ports_status liefert STRINGS (anschlArt="2", bKanalStatus="0" etc.) - Filter jetzt durchgaengig mit String-Vergleich, auch fuer VoIP/ISDN-Subcounts (diese waren vorher mit Integer-Vergleich buggy)
+
+      - VM-Speicher Trigger-Dependency korrigiert (WARNING haengt von KRITISCH ab)
+
+      - API Auth/Lock Trigger Dependency ergaenzt
+
+      - change()-Trigger gegen API-Aussetzer abgesichert (DISCARD_VALUE statt "")
+
+      - system.date.ok robuster (Timezone/Zeitformat-sicher)
+
+      - Firmware-URL als Macro, Regex erweitert fuer 3-stellige Versionen
+
+      - MSN Array-Check, loose equality bei Typen-Vergleichen
+
+      - value_type explizit gesetzt
+
+      - Ping-Dependency fuer Latenz-Trigger'
     macros:
     - macro: '{$AUERSWALD.IP}'
       value: 192.168.1.240
@@ -44,6 +65,9 @@ zabbix_export:
     - macro: '{$AUERSWALD.SYSLOG.PATH}'
       value: /var/log/auerswald.log
       description: Pfad zur Auerswald Syslog-Datei auf dem Zabbix Proxy/Server
+    - macro: '{$AUERSWALD.FIRMWARE.URL}'
+      value: https://www.auerswald.de/de/support/produkt/compact-4000/support
+      description: 'URL der Auerswald-Support-Seite fuer Firmware-Check. Pro Modell anpassen! Beispiele: compact-4000, compact-5000, compact-5200, compact-5500r, commander-6000'
     items:
     - uuid: abdec678c19d42c0aee8c964c8bb5db7
       name: 'System: Raw Info'
@@ -154,6 +178,7 @@ zabbix_export:
       key: auerswald.system.pbxtype
       delay: '0'
       history: 7d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.system.raw
       preprocessing:
@@ -238,7 +263,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 624b170665864b00b27d05d96bf75030
       name: 'Exchanges: Count'
@@ -246,6 +271,7 @@ zabbix_export:
       key: auerswald.exchanges.count
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.exchanges.raw
       preprocessing:
@@ -263,6 +289,7 @@ zabbix_export:
       key: auerswald.exchanges.voip
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.exchanges.raw
       preprocessing:
@@ -312,7 +339,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 6ad7f7bdf7674d1d9813ee2aaf856d23
       name: 'Conversations: Active Count'
@@ -320,6 +347,7 @@ zabbix_export:
       key: auerswald.conversations.active
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.conversations.raw
       preprocessing:
@@ -351,7 +379,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 87bd6b80668b462da586c14ffdb85553
       name: 'Subscriber: Properties Raw'
@@ -380,7 +408,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: a972a1a0a7ff4f08ad0f21f458974886
       name: 'Groups: State Raw'
@@ -403,7 +431,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 13f40d58671444a6ac0e4971838e8c88
       name: 'MSN/DDI: Forwarding Raw'
@@ -426,7 +454,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: b6947c49403c4a7d95f36ce2645b3523
       name: 'VoiceFax: Storage Raw'
@@ -448,7 +476,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 564b9f8d284844e8aa243fc9001d62b6
       name: 'VoiceFax: Used %'
@@ -528,7 +556,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: e68748c073144fb1bcc4adc81b35b4b3
       name: 'VoiceFax: Messages Raw'
@@ -550,7 +578,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: ffbd6207d0254abd9cd8d37f49a1083b
       name: 'VoiceFax: Message Count'
@@ -558,6 +586,7 @@ zabbix_export:
       key: auerswald.vmf.msg.count
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.vmf.messages.raw
       preprocessing:
@@ -575,6 +604,7 @@ zabbix_export:
       key: auerswald.vmf.msg.unread
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.vmf.messages.raw
       preprocessing:
@@ -607,7 +637,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 16ac6cfb76da42de834961051a91c836
       name: 'Relays: Status Raw'
@@ -629,7 +659,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 9edaf7318cc04fa8a455ff3f0508783d
       name: 'Alarms: List Raw'
@@ -651,7 +681,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 7c7dc00edd3d4cbcaf44e30c73c24092
       name: 'Alarms: Active Raw'
@@ -674,7 +704,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 119ae464f7ab4ec285a20392f9537153
       name: 'Config: List Raw'
@@ -697,7 +727,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 7077615aa4b44dc3b28877b56c30f585
       name: 'Phonebook: Categories Raw'
@@ -720,7 +750,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 33e13b7477704c5d90de82824d030260
       name: 'API: Auth Check Raw'
@@ -750,6 +780,7 @@ zabbix_export:
       key: auerswald.api.locked
       delay: '0'
       history: 7d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.api.auth.status
       preprocessing:
@@ -783,7 +814,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (d.blocked) { return ""; } return value; } catch(e) { return ""; }
+        - var d = JSON.parse(value); if (d.blocked) throw "blocked"; return value;
         error_handler: DISCARD_VALUE
     - uuid: 71e900b6fd6c4da38c373ad191b2fdbc
       name: 'External Ports: Total Channels'
@@ -791,6 +822,7 @@ zabbix_export:
       key: auerswald.ext.ports.count
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.ext.ports.raw
       preprocessing:
@@ -808,12 +840,13 @@ zabbix_export:
       key: auerswald.ext.ports.active
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.ext.ports.raw
       preprocessing:
       - type: JSONPATH
         parameters:
-        - $[?(@.bKanalStatus != "0")].length()
+        - $[?(@.bKanalStatus!="0")].length()
         error_handler: CUSTOM_VALUE
         error_handler_params: '0'
       description: Anzahl aktuell belegter externer Kanaele
@@ -826,12 +859,13 @@ zabbix_export:
       key: auerswald.ext.ports.blocked
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.ext.ports.raw
       preprocessing:
       - type: JSONPATH
         parameters:
-        - $[?(@.bKanalGesperrt != "0")].length()
+        - $[?(@.bKanalGesperrt!="0")].length()
         error_handler: CUSTOM_VALUE
         error_handler_params: '0'
       description: Anzahl gesperrter externer Kanaele
@@ -844,6 +878,7 @@ zabbix_export:
       key: auerswald.api.available
       delay: '0'
       history: 7d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.api.auth.status
       preprocessing:
@@ -937,17 +972,17 @@ zabbix_export:
       delay: 1d
       history: 30d
       value_type: TEXT
-      url: https://www.auerswald.de/de/support/produkt/compact-4000/support
+      url: '{$AUERSWALD.FIRMWARE.URL}'
       verify_peer: 'NO'
       verify_host: 'NO'
       preprocessing:
       - type: REGEX
         parameters:
-        - Firmware\s+Version\s+([0-9]+\.[0-9]+[A-Z]?)
+        - 'Firmware\s+Version\s+([0-9]+\.[0-9]+(?:\.[0-9]+)?[A-Z]?(?:-[A-Z0-9]+)?)'
         - \1
         error_handler: CUSTOM_VALUE
         error_handler_params: unknown
-      description: Prueft taeglich die Auerswald-Website auf neueste Firmware-Version. URL muss ggf. pro Modell angepasst werden.
+      description: 'Prueft taeglich die Auerswald-Website auf neueste Firmware-Version. URL wird ueber Macro {$AUERSWALD.FIRMWARE.URL} konfiguriert - pro Modell anpassen! Regex akzeptiert Versionen wie 8.6, 8.6C, 8.6.1, 8.6C-SP1.'
       tags:
       - tag: component
         value: system
@@ -958,15 +993,16 @@ zabbix_export:
       key: auerswald.ext.ports.voip.count
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.ext.ports.raw
       preprocessing:
       - type: JSONPATH
         parameters:
-        - $[?(@.anschlArt==2)].length()
+        - $[?(@.anschlArt=="2")].length()
         error_handler: CUSTOM_VALUE
         error_handler_params: '0'
-      description: Anzahl VoIP-Kanaele (anschlArt=2)
+      description: Anzahl VoIP-Kanaele (anschlArt="2")
       tags:
       - tag: component
         value: voip
@@ -976,12 +1012,13 @@ zabbix_export:
       key: auerswald.ext.ports.voip.active
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.ext.ports.raw
       preprocessing:
       - type: JSONPATH
         parameters:
-        - $[?(@.anschlArt==2 && @.bKanalStatus!=0)].length()
+        - $[?(@.anschlArt=="2" && @.bKanalStatus!="0")].length()
         error_handler: CUSTOM_VALUE
         error_handler_params: '0'
       description: Aktuell belegte VoIP-Kanaele
@@ -994,12 +1031,13 @@ zabbix_export:
       key: auerswald.ext.ports.voip.blocked
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.ext.ports.raw
       preprocessing:
       - type: JSONPATH
         parameters:
-        - $[?(@.anschlArt==2 && @.bKanalGesperrt!=0)].length()
+        - $[?(@.anschlArt=="2" && @.bKanalGesperrt!="0")].length()
         error_handler: CUSTOM_VALUE
         error_handler_params: '0'
       description: Gesperrte VoIP-Kanaele - kann auf SIP-Registrierungsfehler hindeuten!
@@ -1012,15 +1050,16 @@ zabbix_export:
       key: auerswald.ext.ports.isdn.count
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.ext.ports.raw
       preprocessing:
       - type: JSONPATH
         parameters:
-        - $[?(@.anschlArt==0 || @.anschlArt==1)].length()
+        - $[?(@.anschlArt=="0" || @.anschlArt=="1")].length()
         error_handler: CUSTOM_VALUE
         error_handler_params: '0'
-      description: Anzahl ISDN-Kanaele (anschlArt 0=PTP, 1=PTMP)
+      description: Anzahl ISDN-Kanaele (anschlArt "0"=PTP, "1"=PTMP)
       tags:
       - tag: component
         value: voip
@@ -1030,12 +1069,13 @@ zabbix_export:
       key: auerswald.ext.ports.isdn.blocked
       delay: '0'
       history: 90d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.ext.ports.raw
       preprocessing:
       - type: JSONPATH
         parameters:
-        - $[?(@.anschlArt<=1 && @.bKanalGesperrt!=0)].length()
+        - $[?((@.anschlArt=="0" || @.anschlArt=="1") && @.bKanalGesperrt!="0")].length()
         error_handler: CUSTOM_VALUE
         error_handler_params: '0'
       description: Gesperrte ISDN-Kanaele
@@ -1048,17 +1088,14 @@ zabbix_export:
       key: auerswald.system.date.ok
       delay: '0'
       history: 7d
+      value_type: UNSIGNED
       master_item:
         key: auerswald.system.raw
       preprocessing:
-      - type: JSONPATH
-        parameters:
-        - $.date
       - type: JAVASCRIPT
         parameters:
-        - 'var now = new Date(); var dd = String(now.getDate()).padStart(2,"0"); var mm = String(now.getMonth()+1).padStart(2,"0"); var yyyy = now.getFullYear(); var today = dd+"."+mm+"."+yyyy; return (value
-          === today) ? 1 : 0;'
-      description: 1 = Anlagen-Datum stimmt mit Server-Datum ueberein, 0 = Datum falsch!
+        - 'try { var d = JSON.parse(value); var pbxDate = String(d.date || ""); var now = new Date(); var dd = String(now.getDate()).padStart(2,"0"); var mm = String(now.getMonth()+1).padStart(2,"0"); var yyyy = now.getFullYear(); var today = dd+"."+mm+"."+yyyy; return pbxDate.indexOf(today) === 0 ? 1 : 0; } catch(e) { return 0; }'
+      description: '1 = Anlagen-Datum stimmt mit Server-Datum ueberein, 0 = Datum falsch oder nicht lesbar. Matcht auch wenn die API zusaetzlich eine Uhrzeit mitliefert.'
       tags:
       - tag: component
         value: system
@@ -1126,13 +1163,14 @@ zabbix_export:
       type: DEPENDENT
       key: auerswald.msn.count.total
       delay: '0'
+      value_type: UNSIGNED
       description: Gesamtanzahl MSN/DDI-Eintraege (inkl. Duplikate auf mehreren Aemtern)
       master_item:
         key: auerswald.msn.forwarding.raw
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); return d.length; } catch(e) { return 0; }
+        - 'try { var d = JSON.parse(value); return Array.isArray(d) ? d.length : 0; } catch(e) { return 0; }'
       tags:
       - tag: component
         value: msn
@@ -1141,13 +1179,14 @@ zabbix_export:
       type: DEPENDENT
       key: auerswald.msn.count.unique
       delay: '0'
+      value_type: UNSIGNED
       description: Anzahl eindeutiger Rufnummern (ohne Duplikate ueber mehrere Aemter)
       master_item:
         key: auerswald.msn.forwarding.raw
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); var seen = {}; var c = 0; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; c++; } } return c; } catch(e) { return 0; }
+        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return 0; var seen = {}; var c = 0; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; c++; } } return c; } catch(e) { return 0; }
       tags:
       - tag: component
         value: msn
@@ -1164,7 +1203,7 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); var seen = {}; var result = []; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; result.push(d[i].rufNummer + " = " + d[i].name);
+        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return ""; var seen = {}; var result = []; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; result.push(d[i].rufNummer + " = " + d[i].name);
           } } result.sort(); return result.join("\n"); } catch(e) { return ""; }
       tags:
       - tag: component
@@ -1182,8 +1221,8 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - 'try { var d = JSON.parse(value); var result = []; for(var i=0;i<d.length;i++){ var aws = []; if(d[i].awssoforttyp !== 0) aws.push("Sofort->" + d[i].awssofortziel); if(d[i].awsnrtyp !== 0) aws.push("NR->"
-          + d[i].awsnrziel); if(d[i].awsbstyp !== 0) aws.push("Besetzt->" + d[i].awsbsziel); if(aws.length > 0){ result.push(d[i].rufNummer + " (" + d[i].name + "): " + aws.join(", ")); } } return result.length
+        - 'try { var d = JSON.parse(value); if (!Array.isArray(d)) return "Keine"; var result = []; for(var i=0;i<d.length;i++){ var aws = []; if(Number(d[i].awssoforttyp) !== 0) aws.push("Sofort->" + d[i].awssofortziel); if(Number(d[i].awsnrtyp) !== 0) aws.push("NR->"
+          + d[i].awsnrziel); if(Number(d[i].awsbstyp) !== 0) aws.push("Besetzt->" + d[i].awsbsziel); if(aws.length > 0){ result.push(d[i].rufNummer + " (" + d[i].name + "): " + aws.join(", ")); } } return result.length
           > 0 ? result.join("\n") : "Keine"; } catch(e) { return ""; }'
       tags:
       - tag: component
@@ -1193,13 +1232,14 @@ zabbix_export:
       type: DEPENDENT
       key: auerswald.msn.aws.count
       delay: '0'
+      value_type: UNSIGNED
       description: Anzahl MSN/DDI-Eintraege mit aktiver Anrufweiterschaltung
       master_item:
         key: auerswald.msn.forwarding.raw
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); var c = 0; for(var i=0;i<d.length;i++){ if(d[i].awssoforttyp !== 0 || d[i].awsnrtyp !== 0 || d[i].awsbstyp !== 0) c++; } return c; } catch(e) { return 0; }
+        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return 0; var c = 0; for(var i=0;i<d.length;i++){ if(Number(d[i].awssoforttyp) !== 0 || Number(d[i].awsnrtyp) !== 0 || Number(d[i].awsbstyp) !== 0) c++; } return c; } catch(e) { return 0; }
       tags:
       - tag: component
         value: msn
@@ -1309,6 +1349,9 @@ zabbix_export:
     expression: last(/Auerswald COMpact 5000 by HTTP/icmppingsec[,,,,])>{$AUERSWALD.PING.WARN}
     name: 'Auerswald: Hohe Latenz ({ITEM.VALUE}s)'
     priority: WARNING
+    dependencies:
+    - name: 'Auerswald: Nicht erreichbar (Ping)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
     tags:
     - tag: scope
       value: performance
@@ -1324,20 +1367,22 @@ zabbix_export:
     - tag: component
       value: network
   - uuid: 8221ef88928a4fec8741f1494d5a2179
-    expression: change(/Auerswald COMpact 5000 by HTTP/auerswald.system.firmware)<>0
+    expression: change(/Auerswald COMpact 5000 by HTTP/auerswald.system.firmware)<>0 and length(last(/Auerswald COMpact 5000 by HTTP/auerswald.system.firmware))>1
     name: 'Auerswald: Firmware geaendert -> {ITEM.VALUE}'
     priority: INFO
     manual_close: 'YES'
+    description: Feuert bei Firmware-Wechsel. length>1 schuetzt gegen kurzzeitigen "0"-Fallback bei API-Fehlern.
     tags:
     - tag: scope
       value: notice
     - tag: component
       value: firmware
   - uuid: 2c427075b95b4b22970b976d555684b2
-    expression: change(/Auerswald COMpact 5000 by HTTP/auerswald.exchanges.count)<>0
+    expression: change(/Auerswald COMpact 5000 by HTTP/auerswald.exchanges.count)<>0 and last(/Auerswald COMpact 5000 by HTTP/auerswald.exchanges.count)>0 and min(/Auerswald COMpact 5000 by HTTP/auerswald.exchanges.count,15m)>0
     name: 'Auerswald: Amtsleitungen geaendert (jetzt {ITEM.VALUE})'
     priority: WARNING
     manual_close: 'YES'
+    description: Feuert bei Aenderung der Amtsleitungen-Anzahl. min()>0 ueber 15 Min schuetzt gegen kurzzeitige 0-Flaps bei API-Fehlern.
     tags:
     - tag: scope
       value: notice
@@ -1347,6 +1392,9 @@ zabbix_export:
     expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.vmf.used.pct)>{$AUERSWALD.VMF_STORAGE.WARN}
     name: 'Auerswald: VM-Speicher >{$AUERSWALD.VMF_STORAGE.WARN}% ({ITEM.VALUE}%)'
     priority: WARNING
+    dependencies:
+    - name: 'Auerswald: VM-Speicher KRITISCH ({ITEM.VALUE}%)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.vmf.used.pct)>{$AUERSWALD.VMF_STORAGE.CRIT}
     tags:
     - tag: scope
       value: capacity
@@ -1356,9 +1404,6 @@ zabbix_export:
     expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.vmf.used.pct)>{$AUERSWALD.VMF_STORAGE.CRIT}
     name: 'Auerswald: VM-Speicher KRITISCH ({ITEM.VALUE}%)'
     priority: HIGH
-    dependencies:
-    - name: 'Auerswald: VM-Speicher >{$AUERSWALD.VMF_STORAGE.WARN}% ({ITEM.VALUE}%)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.vmf.used.pct)>{$AUERSWALD.VMF_STORAGE.WARN}
     tags:
     - tag: scope
       value: capacity
@@ -1382,6 +1427,8 @@ zabbix_export:
     dependencies:
     - name: 'Auerswald: Nicht erreichbar (Ping)'
       expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+    - name: 'Auerswald: API Account GESPERRT (noch {ITEM.VALUE}s)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.api.locked)>0
     tags:
     - tag: scope
       value: availability
@@ -1449,6 +1496,9 @@ zabbix_export:
     name: 'Auerswald: SIP-Proxy hohe Latenz ({ITEM.VALUE}s)'
     priority: WARNING
     description: Hohe Latenz zum SIP-Proxy kann Sprachqualitaet beeintraechtigen
+    dependencies:
+    - name: 'Auerswald: SIP-Proxy nicht erreichbar (Ping)'
+      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,])=0
     tags:
     - tag: scope
       value: performance
