@@ -19,7 +19,8 @@ zabbix_export:
 
       Bugfixes v3.1:
 
-      - JSONPath Typ-Konsistenz: ext_ports_status liefert STRINGS (anschlArt="2", bKanalStatus="0" etc.) - Filter jetzt durchgaengig mit String-Vergleich, auch fuer VoIP/ISDN-Subcounts (diese waren vorher mit Integer-Vergleich buggy)
+      - JSONPath Typ-Konsistenz: ext_ports_status liefert STRINGS (anschlArt="2", bKanalStatus="0" etc.) - Filter jetzt durchgaengig mit String-Vergleich, auch fuer VoIP/ISDN-Subcounts (diese waren vorher
+      mit Integer-Vergleich buggy)
 
       - VM-Speicher Trigger-Dependency korrigiert (WARNING haengt von KRITISCH ab)
 
@@ -229,7 +230,7 @@ zabbix_export:
       name: 'HTTPS: Status Code'
       type: HTTP_AGENT
       key: auerswald.https.status
-      delay: 60s
+      delay: 5m
       history: 7d
       url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_about
       verify_peer: 'NO'
@@ -323,7 +324,7 @@ zabbix_export:
       name: 'Conversations: Raw'
       type: HTTP_AGENT
       key: auerswald.conversations.raw
-      delay: 30s
+      delay: 2m
       history: '0'
       value_type: TEXT
       url: https://{$AUERSWALD.IP}:{$AUERSWALD.PORT}/app_conversation_data
@@ -978,11 +979,12 @@ zabbix_export:
       preprocessing:
       - type: REGEX
         parameters:
-        - 'Firmware\s+Version\s+([0-9]+\.[0-9]+(?:\.[0-9]+)?[A-Z]?(?:-[A-Z0-9]+)?)'
+        - Firmware\s+Version\s+([0-9]+\.[0-9]+(?:\.[0-9]+)?[A-Z]?(?:-[A-Z0-9]+)?)
         - \1
         error_handler: CUSTOM_VALUE
         error_handler_params: unknown
-      description: 'Prueft taeglich die Auerswald-Website auf neueste Firmware-Version. URL wird ueber Macro {$AUERSWALD.FIRMWARE.URL} konfiguriert - pro Modell anpassen! Regex akzeptiert Versionen wie 8.6, 8.6C, 8.6.1, 8.6C-SP1.'
+      description: Prueft taeglich die Auerswald-Website auf neueste Firmware-Version. URL wird ueber Macro {$AUERSWALD.FIRMWARE.URL} konfiguriert - pro Modell anpassen! Regex akzeptiert Versionen wie 8.6,
+        8.6C, 8.6.1, 8.6C-SP1.
       tags:
       - tag: component
         value: system
@@ -1092,10 +1094,14 @@ zabbix_export:
       master_item:
         key: auerswald.system.raw
       preprocessing:
+      - type: JSONPATH
+        parameters:
+        - $.date
       - type: JAVASCRIPT
         parameters:
-        - 'try { var d = JSON.parse(value); var pbxDate = String(d.date || ""); var now = new Date(); var dd = String(now.getDate()).padStart(2,"0"); var mm = String(now.getMonth()+1).padStart(2,"0"); var yyyy = now.getFullYear(); var today = dd+"."+mm+"."+yyyy; return pbxDate.indexOf(today) === 0 ? 1 : 0; } catch(e) { return 0; }'
-      description: '1 = Anlagen-Datum stimmt mit Server-Datum ueberein, 0 = Datum falsch oder nicht lesbar. Matcht auch wenn die API zusaetzlich eine Uhrzeit mitliefert.'
+        - 'try {  var pbxDate = value.trim();  var parts = pbxDate.split(".");  if(parts.length !== 3) return 0;  var pbxTime = new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0]));  var
+          now = new Date();  var diffMs = Math.abs(now.getTime() - pbxTime.getTime());  var diffDays = diffMs / 86400000;  return (diffDays <= 1) ? 1 : 0;} catch(e) { return 0; }'
+      description: 1 = Anlagen-Datum stimmt mit Server-Datum ueberein, 0 = Datum falsch oder nicht lesbar. Matcht auch wenn die API zusaetzlich eine Uhrzeit mitliefert.
       tags:
       - tag: component
         value: system
@@ -1186,7 +1192,8 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return 0; var seen = {}; var c = 0; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; c++; } } return c; } catch(e) { return 0; }
+        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return 0; var seen = {}; var c = 0; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; c++; } } return c;
+          } catch(e) { return 0; }
       tags:
       - tag: component
         value: msn
@@ -1203,8 +1210,8 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return ""; var seen = {}; var result = []; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; result.push(d[i].rufNummer + " = " + d[i].name);
-          } } result.sort(); return result.join("\n"); } catch(e) { return ""; }
+        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return ""; var seen = {}; var result = []; for(var i=0;i<d.length;i++){ if(!seen[d[i].rufNummer]){ seen[d[i].rufNummer]=true; result.push(d[i].rufNummer
+          + " = " + d[i].name); } } result.sort(); return result.join("\n"); } catch(e) { return ""; }
       tags:
       - tag: component
         value: msn
@@ -1221,9 +1228,9 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - 'try { var d = JSON.parse(value); if (!Array.isArray(d)) return "Keine"; var result = []; for(var i=0;i<d.length;i++){ var aws = []; if(Number(d[i].awssoforttyp) !== 0) aws.push("Sofort->" + d[i].awssofortziel); if(Number(d[i].awsnrtyp) !== 0) aws.push("NR->"
-          + d[i].awsnrziel); if(Number(d[i].awsbstyp) !== 0) aws.push("Besetzt->" + d[i].awsbsziel); if(aws.length > 0){ result.push(d[i].rufNummer + " (" + d[i].name + "): " + aws.join(", ")); } } return result.length
-          > 0 ? result.join("\n") : "Keine"; } catch(e) { return ""; }'
+        - 'try { var d = JSON.parse(value); if (!Array.isArray(d)) return "Keine"; var result = []; for(var i=0;i<d.length;i++){ var aws = []; if(Number(d[i].awssoforttyp) !== 0) aws.push("Sofort->" + d[i].awssofortziel);
+          if(Number(d[i].awsnrtyp) !== 0) aws.push("NR->" + d[i].awsnrziel); if(Number(d[i].awsbstyp) !== 0) aws.push("Besetzt->" + d[i].awsbsziel); if(aws.length > 0){ result.push(d[i].rufNummer + " ("
+          + d[i].name + "): " + aws.join(", ")); } } return result.length > 0 ? result.join("\n") : "Keine"; } catch(e) { return ""; }'
       tags:
       - tag: component
         value: msn
@@ -1239,7 +1246,8 @@ zabbix_export:
       preprocessing:
       - type: JAVASCRIPT
         parameters:
-        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return 0; var c = 0; for(var i=0;i<d.length;i++){ if(Number(d[i].awssoforttyp) !== 0 || Number(d[i].awsnrtyp) !== 0 || Number(d[i].awsbstyp) !== 0) c++; } return c; } catch(e) { return 0; }
+        - try { var d = JSON.parse(value); if (!Array.isArray(d)) return 0; var c = 0; for(var i=0;i<d.length;i++){ if(Number(d[i].awssoforttyp) !== 0 || Number(d[i].awsnrtyp) !== 0 || Number(d[i].awsbstyp)
+          !== 0) c++; } return c; } catch(e) { return 0; }
       tags:
       - tag: component
         value: msn
@@ -1313,7 +1321,7 @@ zabbix_export:
       value: pbx
   triggers:
   - uuid: bf732edcd1264d9bb48b1e9ec9fed183
-    expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+    expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,],3m)=0
     name: 'Auerswald: Nicht erreichbar (Ping)'
     priority: DISASTER
     tags:
@@ -1327,19 +1335,19 @@ zabbix_export:
     priority: HIGH
     dependencies:
     - name: 'Auerswald: Nicht erreichbar (Ping)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,],3m)=0
     tags:
     - tag: scope
       value: availability
     - tag: component
       value: api
   - uuid: bcb8070254ec4dbab14d516de757e411
-    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.https.status)<>200
+    expression: min(/Auerswald COMpact 5000 by HTTP/auerswald.https.status,3m)<>200
     name: 'Auerswald: Webinterface HTTP {ITEM.VALUE}'
     priority: HIGH
     dependencies:
     - name: 'Auerswald: Nicht erreichbar (Ping)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,],3m)=0
     tags:
     - tag: scope
       value: availability
@@ -1351,7 +1359,7 @@ zabbix_export:
     priority: WARNING
     dependencies:
     - name: 'Auerswald: Nicht erreichbar (Ping)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,],3m)=0
     tags:
     - tag: scope
       value: performance
@@ -1420,13 +1428,13 @@ zabbix_export:
     - tag: component
       value: voicemail
   - uuid: d3858b977da1468491253c32fab34f16
-    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.api.available)=0
+    expression: max(/Auerswald COMpact 5000 by HTTP/auerswald.api.available,3m)=0
     name: 'Auerswald: API Auth nicht verfuegbar'
     priority: HIGH
     description: 401=Falsches Passwort/User, 423=Account gesperrt, 404=Endpoint nicht gefunden
     dependencies:
     - name: 'Auerswald: Nicht erreichbar (Ping)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,],3m)=0
     - name: 'Auerswald: API Account GESPERRT (noch {ITEM.VALUE}s)'
       expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.api.locked)>0
     tags:
@@ -1441,7 +1449,7 @@ zabbix_export:
     description: Anlage hat API-Zugang gesperrt wegen zu vieler fehlgeschlagener Logins. Warten oder Anlage neustarten.
     dependencies:
     - name: 'Auerswald: Nicht erreichbar (Ping)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,],3m)=0
     tags:
     - tag: scope
       value: security
@@ -1458,7 +1466,7 @@ zabbix_export:
     - tag: component
       value: channels
   - uuid: 492387b8da894c299dfb41e42d3f65e1
-    expression: last(/Auerswald COMpact 5000 by HTTP/net.dns[,{$AUERSWALD.SIP.PROXY},,,2])=0
+    expression: max(/Auerswald COMpact 5000 by HTTP/net.dns[,{$AUERSWALD.SIP.PROXY},,,2],5m)=0
     name: 'Auerswald: SIP-Proxy DNS Aufloesung fehlgeschlagen'
     priority: DISASTER
     description: SIP-Proxy Hostname kann nicht aufgeloest werden - keine VoIP-Telefonie moeglich!
@@ -1468,24 +1476,24 @@ zabbix_export:
     - tag: component
       value: sip-proxy
   - uuid: 14999d9e7dd74be4bbdab949f1e7a10d
-    expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,])=0
+    expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,],3m)=0
     name: 'Auerswald: SIP-Proxy nicht erreichbar (Ping)'
     priority: HIGH
     dependencies:
     - name: 'Auerswald: SIP-Proxy DNS Aufloesung fehlgeschlagen'
-      expression: last(/Auerswald COMpact 5000 by HTTP/net.dns[,{$AUERSWALD.SIP.PROXY},,,2])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/net.dns[,{$AUERSWALD.SIP.PROXY},,,2],5m)=0
     tags:
     - tag: scope
       value: availability
     - tag: component
       value: sip-proxy
   - uuid: 7b503935bd3d45f9875eee3dd882c288
-    expression: last(/Auerswald COMpact 5000 by HTTP/net.tcp.service[tcp,{$AUERSWALD.SIP.PROXY},{$AUERSWALD.SIP.PORT}])=0 and last(/Auerswald COMpact 5000 by HTTP/net.tcp.service[tcp,{$AUERSWALD.SIP.PROXY},5061])=0
+    expression: max(/Auerswald COMpact 5000 by HTTP/net.tcp.service[tcp,{$AUERSWALD.SIP.PROXY},{$AUERSWALD.SIP.PORT}],3m)=0 and max(/Auerswald COMpact 5000 by HTTP/net.tcp.service[tcp,{$AUERSWALD.SIP.PROXY},5061],3m)=0
     name: 'Auerswald: SIP-Proxy Ports nicht erreichbar (5060+5061)'
     priority: HIGH
     dependencies:
     - name: 'Auerswald: SIP-Proxy nicht erreichbar (Ping)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,],3m)=0
     tags:
     - tag: scope
       value: availability
@@ -1498,14 +1506,14 @@ zabbix_export:
     description: Hohe Latenz zum SIP-Proxy kann Sprachqualitaet beeintraechtigen
     dependencies:
     - name: 'Auerswald: SIP-Proxy nicht erreichbar (Ping)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[{$AUERSWALD.SIP.PROXY},,,],3m)=0
     tags:
     - tag: scope
       value: performance
     - tag: component
       value: sip-proxy
   - uuid: ba746230527749258b5cdc5c1db30786
-    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
+    expression: min(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active,3m)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
     name: 'Auerswald: ALLE externen Kanaele belegt ({ITEM.VALUE}/{ITEM.VALUE1})'
     priority: HIGH
     description: Alle VoIP/ISDN-Kanaele sind belegt. Neue Anrufe werden abgewiesen!
@@ -1515,12 +1523,12 @@ zabbix_export:
     - tag: component
       value: channels
   - uuid: b48855e78aad4f8a80c1b63f6c297467
-    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active)>(last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)*0.8) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
+    expression: min(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active,3m)>(last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)*0.8) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
     name: 'Auerswald: Hohe Kanalbelegung (>80%)'
     priority: WARNING
     dependencies:
     - name: 'Auerswald: ALLE externen Kanaele belegt ({ITEM.VALUE}/{ITEM.VALUE1})'
-      expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
+      expression: min(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.active,3m)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.count)>0
     description: Ueber 80% der externen Kanaele belegt
     tags:
     - tag: scope
@@ -1540,7 +1548,7 @@ zabbix_export:
     - tag: component
       value: firmware
   - uuid: a4e0d7cfafcf4010bd6ab3d577e214db
-    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.blocked)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
+    expression: min(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.blocked,3m)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
     name: 'Auerswald: ALLE VoIP-Kanaele gesperrt - SIP-Registrierung fehlgeschlagen?'
     priority: DISASTER
     description: 'Alle VoIP-Kanaele sind gesperrt. Haeufigste Ursache: SIP-Registrierung beim Provider fehlgeschlagen. Pruefen: Monitoring > Status VoIP-Accounts in der Anlage.'
@@ -1555,7 +1563,7 @@ zabbix_export:
     priority: WARNING
     dependencies:
     - name: 'Auerswald: ALLE VoIP-Kanaele gesperrt - SIP-Registrierung fehlgeschlagen?'
-      expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.blocked)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
+      expression: min(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.blocked,3m)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
     tags:
     - tag: scope
       value: availability
@@ -1571,7 +1579,7 @@ zabbix_export:
     - tag: component
       value: channels
   - uuid: b0b5e2bc9b9f4399b5e6f0931d013cda
-    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.active)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
+    expression: min(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.active,3m)=last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count) and last(/Auerswald COMpact 5000 by HTTP/auerswald.ext.ports.voip.count)>0
     name: 'Auerswald: Alle VoIP-Kanaele belegt'
     priority: HIGH
     description: Alle VoIP-Kanaele sind besetzt. Neue VoIP-Anrufe werden abgewiesen!
@@ -1581,13 +1589,13 @@ zabbix_export:
     - tag: component
       value: voip-channels
   - uuid: 755db8d31dec477da579027c9fe28f7b
-    expression: last(/Auerswald COMpact 5000 by HTTP/auerswald.system.date.ok)=0
+    expression: max(/Auerswald COMpact 5000 by HTTP/auerswald.system.date.ok,5m)=0
     name: 'Auerswald: Datum der Anlage stimmt nicht! ({ITEM.VALUE})'
     priority: HIGH
     description: 'Das Datum der Anlage weicht vom Server-Datum ab. Kann SIP-Registrierungsfehler verursachen! Pruefen: NTP-Einstellungen der Anlage.'
     dependencies:
     - name: 'Auerswald: Nicht erreichbar (Ping)'
-      expression: last(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,])=0
+      expression: max(/Auerswald COMpact 5000 by HTTP/icmpping[,,,,],3m)=0
     tags:
     - tag: scope
       value: security
